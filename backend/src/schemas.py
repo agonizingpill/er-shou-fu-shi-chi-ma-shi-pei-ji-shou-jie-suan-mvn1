@@ -29,3 +29,17 @@ class PayoutIn(Input):
  sale_id:int;reference:str=Field(min_length=3,max_length=60)
 class ReasonIn(Input):reason:str=Field(min_length=8,max_length=500)
 class ClockIn(ReasonIn):now:str
+class CapacityIn(Input):
+ garment_id:int
+ chest_max_cm:float=Field(ge=0,le=20,multiple_of=.5)
+ shoulder_max_cm:float=Field(ge=0,le=20,multiple_of=.5)
+ chest_labor_cents:int=Field(ge=0,le=100000)
+ shoulder_labor_cents:int=Field(ge=0,le=100000)
+ chest_fabric_cm:float=Field(ge=0,le=20,multiple_of=.5)
+ shoulder_fabric_cm:float=Field(ge=0,le=20,multiple_of=.5)
+class StockIn(Input):
+ delta_cm:float=Field(ge=-100,le=100,multiple_of=.5);reason:str=Field(min_length=8,max_length=500)
+class QuoteIn(Input):
+ garment_id:int;profile_id:int
+class ConfirmIn(Input):
+ idempotency_key:str=Field(min_length=8,max_length=64,pattern=r'^[A-Za-z0-9._:-]+$')

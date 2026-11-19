@@ -5,14 +5,14 @@ from .models import *
 from .schemas import *
 from .common import *
 from .security import current,allow
-from . import consignment_service as consignment,fit_service as fit,fitting_service as fitting,sale_service as sale,return_service as returns,settlement_service as settlement
+from . import consignment_service as consignment,fit_service as fit,fitting_service as fitting,sale_service as sale,return_service as returns,settlement_service as settlement,alteration_service as alteration
 router=APIRouter()
 def change(u,action,fn,supervisor=False):
  allow(u,*(['supervisor'] if supervisor else ['operator','supervisor']))
  with Session() as s:x=fn(s);audit(s,u,action,x);s.commit();return dump(x)
 @router.get('/register')
 def register(u=Depends(current)):
- with Session() as s:return {n:[dump(x) for x in rows(s,c)] for n,c in [('consignors',Consignor),('agreements',Agreement),('amendments',Amendment),('garments',Garment),('measurements',Measurement),('profiles',FitProfile),('assessments',FitAssessment),('fittings',Fitting),('sales',Sale),('returns',Return),('payouts',Payout),('withdrawals',Withdrawal),('clock',Shop)]}
+ with Session() as s:return {n:[dump(x) for x in rows(s,c)] for n,c in [('consignors',Consignor),('agreements',Agreement),('amendments',Amendment),('garments',Garment),('measurements',Measurement),('profiles',FitProfile),('assessments',FitAssessment),('fittings',Fitting),('sales',Sale),('returns',Return),('payouts',Payout),('withdrawals',Withdrawal),('alteration_capacities',AlterationCapacity),('fabric_stock',FabricStock),('fabric_adjustments',FabricAdjustment),('alteration_quotes',AlterationQuote),('alteration_confirmations',AlterationConfirmation),('clock',Shop)]}
 @router.get('/audit')
 def audits(u=Depends(current)):
  with Session() as s:return [dump(x) for x in rows(s,Audit)]
@@ -52,3 +52,14 @@ def payouts(d:PayoutIn,u=Depends(current)):return change(u,'寄售结算',lambda
 def withdraw(id:int,d:ReasonIn,u=Depends(current)):return change(u,'期满撤回',lambda s:settlement.withdraw(s,id,d.model_dump()),True)
 @router.post('/clock')
 def clock(d:ClockIn,u=Depends(current)):return change(u,'推进演示时钟',lambda s:settlement.clock(s,d.model_dump()),True)
+@router.post('/alteration-capacities')
+def capacities(d:CapacityIn,u=Depends(current)):return change(u,'登记放宽能力',lambda s:alteration.capacity(s,d.model_dump()))
+@router.post('/fabric-stock')
+def fabric_stock(d:StockIn,u=Depends(current)):return change(u,'调整共享布条',lambda s:alteration.adjust_stock(s,d.model_dump()),True)
+@router.post('/alteration-quotes')
+def alteration_quotes(d:QuoteIn,u=Depends(current)):return change(u,'改衣报价',lambda s:alteration.quote(s,d.model_dump()))
+@router.post('/alteration-quotes/{id}/confirm')
+def alteration_confirm(id:int,d:ConfirmIn,u=Depends(current)):
+ allow(u,'operator','supervisor')
+ with Session() as s:
+  x=alteration.confirm(s,id,d.model_dump(),u['email']);s.add(Audit(actor=u['email'],action='确认改衣报价',detail=(x['message']+' '+str(x.get('quote',{})))[:500]));s.commit();return x

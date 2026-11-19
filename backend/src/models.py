@@ -31,6 +31,24 @@ class FitAssessment(Base):
 class Fitting(Base):
  __tablename__='fittings'
  id=Column(Integer,primary_key=True);garment_id=Column(Integer,ForeignKey('garments.id'),nullable=False);profile_id=Column(Integer,ForeignKey('profiles.id'),nullable=False);slot=Column(Integer,nullable=False);starts=Column(String(32),nullable=False);ends=Column(String(32),nullable=False);state=Column(String(20),default='reserved',nullable=False)
+class AlterationCapacity(Base):
+ __tablename__='alteration_capacities'
+ id=Column(Integer,primary_key=True);garment_id=Column(Integer,ForeignKey('garments.id'),unique=True,nullable=False);chest_max_half=Column(Integer,nullable=False);shoulder_max_half=Column(Integer,nullable=False);chest_labor_cents=Column(Integer,nullable=False);shoulder_labor_cents=Column(Integer,nullable=False);chest_fabric_half=Column(Integer,nullable=False);shoulder_fabric_half=Column(Integer,nullable=False)
+ __table_args__=(CheckConstraint('chest_max_half>=0 AND chest_max_half<=40 AND shoulder_max_half>=0 AND shoulder_max_half<=40 AND chest_labor_cents>=0 AND shoulder_labor_cents>=0 AND chest_fabric_half>=0 AND shoulder_fabric_half>=0'),)
+class FabricStock(Base):
+ __tablename__='fabric_stock'
+ id=Column(Integer,primary_key=True);stock_half=Column(Integer,nullable=False)
+ __table_args__=(CheckConstraint('stock_half>=0'),)
+class FabricAdjustment(Base):
+ __tablename__='fabric_adjustments'
+ id=Column(Integer,primary_key=True);from_half=Column(Integer,nullable=False);to_half=Column(Integer,nullable=False);reason=Column(String(500),nullable=False);at=Column(String(32),nullable=False)
+class AlterationQuote(Base):
+ __tablename__='alteration_quotes'
+ id=Column(Integer,primary_key=True);garment_id=Column(Integer,ForeignKey('garments.id'),nullable=False);profile_id=Column(Integer,ForeignKey('profiles.id'),nullable=False);chest_half=Column(Integer,nullable=True);shoulder_half=Column(Integer,nullable=True);labor_cents=Column(Integer,nullable=True);fabric_half=Column(Integer,nullable=True);stock_half=Column(Integer,nullable=False);state=Column(String(20),default='quoted',nullable=False);invalid_cause=Column(String(20),default='',nullable=False);reason=Column(String(500),default='',nullable=False);replaces_id=Column(Integer,ForeignKey('alteration_quotes.id'),nullable=True);result=Column(JSON,nullable=True)
+ __table_args__=(CheckConstraint("state IN ('quoted','confirmed','invalid','no_fit')"),CheckConstraint("invalid_cause IN ('','fabric','garment')"),CheckConstraint('chest_half IS NULL OR chest_half>=0'),CheckConstraint('shoulder_half IS NULL OR shoulder_half>=0'))
+class AlterationConfirmation(Base):
+ __tablename__='alteration_confirmations'
+ id=Column(Integer,primary_key=True);quote_id=Column(Integer,ForeignKey('alteration_quotes.id'),unique=True,nullable=False);idempotency_key=Column(String(64),unique=True,nullable=False);fabric_half=Column(Integer,nullable=False);labor_cents=Column(Integer,nullable=False);actor=Column(String(160),nullable=False);confirmed_at=Column(String(32),nullable=False)
 class Sale(Base):
  __tablename__='sales'
  id=Column(Integer,primary_key=True);fitting_id=Column(Integer,ForeignKey('fittings.id'),unique=True,nullable=False);garment_id=Column(Integer,ForeignKey('garments.id'),nullable=False);price_cents=Column(Integer,nullable=False);commission_bp=Column(Integer,nullable=False);commission_cents=Column(Integer,nullable=False);net_cents=Column(Integer,nullable=False);sold_at=Column(String(32),nullable=False);return_deadline=Column(String(32),nullable=False);state=Column(String(20),default='completed',nullable=False)
